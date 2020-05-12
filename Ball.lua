@@ -35,6 +35,7 @@ function Ball:reset()
 
     self.dx = math.random(2) == 1 and 100 or -100
     self.dy = math.random(-50, 50) * 1.5
+    self.color = 'white'
 end
 
 function Ball:update(dt)
@@ -46,33 +47,20 @@ function Ball:wrap(ball)
     if ball.y <= 0 and ball.y + ball.height >= 0 then
         self.width = ball.width
         self.x = ball.x
-        self.height = ball.y + ball.height
+        self.height = ball.height
         self.y = VIRTUAL_HEIGHT - self.height
-        self.color = 'green'
         self.dx = ball.dx
         self.dy = ball.dy
-    elseif ball.y + ball.height >= VIRTUAL_HEIGHT and ball.y <= VIRTUAL_HEIGHT then
+        return self
+    elseif ball.y <= VIRTUAL_HEIGHT and ball.y + ball.height >= VIRTUAL_HEIGHT then
         self.width = ball.width
-        self.height = VIRTUAL_HEIGHT - ball.y
-        self.y = VIRTUAL_HEIGHT - self.height
+        self.height = ball.height
+        self.y = 0
         self.x = ball.x
-        self.color = 'green'
         self.dx = ball.dx
         self.dy = ball.dy
-    elseif ball.y < 0 and ball.y + ball.height < 0 or ball.y > VIRTUAL_HEIGHT then
-        ball.width = self.width
-        ball.height = self.height
-        ball.y = self.height
-        ball.x = self.x
-        ball.color = self.color
-        ball.dx = self.dx
-        ball.dy = self.dy
-        self.width = 0
-        self.height = 0
-        self.y = 0
-        self.x = 0
-        self.color = 0
-        self.dx = 0
-        self.dy = 0
+        return self
+    else
+        return ball
     end
 end

@@ -46,11 +46,9 @@ function love.load()
 
     servingPlayer = math.random(2) == 1 and 1 or 2
     winningPlayer = 0
+    numPlayers = 0
 
-    player1 = Paddle(5, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 'blue')
-    player2 = Ai(VIRTUAL_WIDTH - 10, 0, 5, PADDLE_HEIGHT, 0.25, 'red')
     ball = Ball(VIRTUAL_WIDTH / 2 - 2, VIRTUAL_HEIGHT / 2 - 2, 4, 4)
-    ball2 = Ball(0, 0, 0, 0)
 
     if servingPlayer == 1 then
         ball.dx = -100
@@ -58,7 +56,7 @@ function love.load()
         ball.dx = 100
     end
 
-    gameState = 'start'
+    gameState = 'playerSelect'
     fpsState = false
 
     tipbonus = 1.25
@@ -72,117 +70,146 @@ end
 --dt is a function measuring the amount of time that has elapsed since the last frame.
 --By scaling movement/update values by dt, we create consistent experiences independent of frame rate.
 function love.update(dt)
-    
-    player1:update(dt)
-    
-    if ball.dx > 0 then
-        player2.state = 'responding'
-    else 
-        player2.state = 'waiting'
-    end
-
-    if ball.dy >= 0 then
-        player2:changeTarget(ball.y + (player2.x - (ball.x + ball.width)) / ball.dx * ball.dy)
-    else 
-        player2:changeTarget(ball.y + ball.height + (player2.x - (ball.x + ball.width)) / ball.dx * ball.dy)
-    end
-    player2:setDirection()
-    player2:update(dt)
-
-    --Check for input
-    if love.keyboard.isDown('w') then
-        player1.dy = -PADDLE_SPEED
-    --Check for input
-    elseif love.keyboard.isDown('s') then
-        player1.dy = PADDLE_SPEED
-    else
-        player1.dy = 0
-    end
-
-    if gameState == 'play' then
+    if gameState ~= 'playerSelect' then
+        player1:update(dt)
+        player2:update(dt)
         
-        ball:update(dt)
-        ball2:update(dt)
-        
-        p1Collide = ball:collide(player1)
-        p2Collide = ball:collide(player2)
-
-        if p1Collide ~= 0 then
-            --deflect ball to right
-            if p1Collide == 2 then
-                ball.dy =  tipbonus * math.abs(ball.dy)
-            elseif p1Collide == 3 then
-                ball.dy =  - tipbonus * math.abs(ball.dy)
-            end
-            ball.color = player1.color
-            ball.dx = -ball.dx * 1.1
-            ball.x = player1.x + player1.width
-            player2.remainingDelay = player2.maxDelay
-            sounds['paddle_hit']:play()
-        end
-
-        if p2Collide ~= 0 then
-            --deflect ball to right
-            if p2Collide == 2 then
-                ball.dy =  tipbonus * math.abs(ball.dy)
-            elseif p2Collide == 3 then
-                ball.dy =  - tipbonus * math.abs(ball.dy)
-            end
-            ball.color = player2.color
-            ball.dx = -ball.dx * 1.1
-            ball.x = player2.x - ball.width
-            player2.remainingDelay = player2.maxDelay
-
-            sounds['paddle_hit']:play()
-        end
-
-        ball2:wrap(ball)
-
-        --[[
-        if ball.y <= 0 then
-            --Deflect ball off ceiling
-            ball.dy = -ball.dy
-            ball.y = 0
-            player2.remainingDelay = player2.maxDelay
-            sounds['edge_hit']:play()
-        end
-        ]]
-        
-        if ball.y >= VIRTUAL_HEIGHT - ball.height then
-            --Deflect ball off floor
-            ball.dy = -ball.dy
-            ball.y = VIRTUAL_HEIGHT - ball.height
-            player2.remainingDelay = player2.maxDelay
-            sounds['edge_hit']:play()
-        end
-
-        if ball.x <= 0 then
-            player2.score = player2.score + 1
-            ball:reset()
-
-            sounds['point_scored']:play()
-
-            if player2.score >= SCORE_LIMIT then
-                winningPlayer = 2
-                gameState = 'victory'
-            else
-                ball.dx = -100
-                servingPlayer = 1
-                gameState = 'serve'
-            end
-        elseif ball.x >= VIRTUAL_WIDTH - ball.width then
-            player1.score = player1.score + 1
-            ball:reset()
-
-            sounds['point_scored']:play()
-
-            if player1.score >= SCORE_LIMIT then
-                winningPlayer = 1
-                gameState = 'victory'
+        if numPlayers == 1 then
+            if ball.dx > 0 then
+                player2.state = 'responding'
             else 
-                ball.dx = 100
-                servingPlayer = 2
-                gameState = 'serve'
+                player2.state = 'waiting'
+            end
+
+            if ball.dy >= 0 then
+                player2:changeTarget(ball.y + (player2.x - (ball.x + ball.width)) / ball.dx * ball.dy)
+            else 
+                player2:changeTarget(ball.y + ball.height + (player2.x - (ball.x + ball.width)) / ball.dx * ball.dy)
+            end
+            player2:setDirection()
+        else
+            if love.keyboard.isDown('up') then
+                player2.dy = -PADDLE_SPEED
+            elseif love.keyboard.isDown('down') then
+                player2.dy = PADDLE_SPEED
+            else
+                player2.dy = 0
+            end
+        end
+
+        --Check for input
+        if love.keyboard.isDown('w') then
+            player1.dy = -PADDLE_SPEED
+        elseif love.keyboard.isDown('s') then
+            player1.dy = PADDLE_SPEED
+        else
+            player1.dy = 0
+        end
+
+        if gameState == 'play' then
+            
+            ball:update(dt)
+            
+            p1Collide = ball:collide(player1)
+            p2Collide = ball:collide(player2)
+
+            if p1Collide ~= 0 then
+                --deflect ball to right
+                if p1Collide == 2 then
+                    ball.dy =  tipbonus * math.abs(ball.dy)
+                elseif p1Collide == 3 then
+                    ball.dy =  - tipbonus * math.abs(ball.dy)
+                end
+                ball.color = player1.color
+                ball.dx = -ball.dx * 1.1
+                ball.x = player1.x + player1.width
+                sounds['paddle_hit']:play()
+                
+                if numPlayers == 1 then
+                    player2.remainingDelay = player2.maxDelay
+                end
+            end
+
+            if p2Collide ~= 0 then
+                --deflect ball to right
+                if p2Collide == 2 then
+                    ball.dy =  tipbonus * math.abs(ball.dy)
+                elseif p2Collide == 3 then
+                    ball.dy =  - tipbonus * math.abs(ball.dy)
+                end
+                ball.color = player2.color
+                ball.dx = -ball.dx * 1.1
+                ball.x = player2.x - ball.width
+                sounds['paddle_hit']:play()
+                
+                if numPlayers == 1 then
+                    player2.remainingDelay = player2.maxDelay
+                end
+            end
+
+            if ball.color == 'green' then
+                ball = ball:wrap(ball)
+            else
+                if ball.y <= 0 then
+                    --Deflect ball off ceiling
+                    ball.dy = -ball.dy
+                    ball.y = 0
+                    sounds['edge_hit']:play()
+
+                    if numPlayers == 1 then
+                        player2.remainingDelay = player2.maxDelay
+                    end
+                end
+                if ball.y >= VIRTUAL_HEIGHT - ball.height then
+                    --Deflect ball off floor
+                    ball.dy = -ball.dy
+                    ball.y = VIRTUAL_HEIGHT - ball.height
+                    sounds['edge_hit']:play()
+                    
+                    if numPlayers == 1 then
+                        player2.remainingDelay = player2.maxDelay
+                    end
+                end
+            end
+
+            if ball.x <= 0 then
+                player2.score = player2.score + 1
+                if player1.score <= player2.score - 2 then
+                    player1.color = 'green'
+                else
+                    player1.color = 'white'
+                end
+                ball:reset()
+
+                sounds['point_scored']:play()
+
+                if player2.score >= SCORE_LIMIT then
+                    winningPlayer = 2
+                    gameState = 'victory'
+                else
+                    ball.dx = -100
+                    servingPlayer = 1
+                    gameState = 'serve'
+                end
+            elseif ball.x >= VIRTUAL_WIDTH - ball.width then
+                player1.score = player1.score + 1
+                if player2.score <= player1.score - 2 then
+                    player2.color = 'green'
+                else
+                    player2.color = 'white'
+                end
+                ball:reset()
+
+                sounds['point_scored']:play()
+
+                if player1.score >= SCORE_LIMIT then
+                    winningPlayer = 1
+                    gameState = 'victory'
+                else 
+                    ball.dx = 100
+                    servingPlayer = 2
+                    gameState = 'serve'
+                end
             end
         end
     end
@@ -191,13 +218,25 @@ end
 function love.keypressed(key)
     if key == 'escape' then
         love.event.quit()
+    elseif gameState == 'playerSelect' then
+        if key == '1' then
+            player1 = Paddle(5, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 'white')
+            player2 = Ai(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 0.25, 'white')
+            numPlayers = 1
+            gameState = 'start'
+        elseif key == '2' then
+            player1 = Paddle(5, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 'white')
+            player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 'white')
+            numPlayers = 2
+            gameState = 'start'
+        end
     elseif key == 'enter' or key == 'return' then
         if gameState == 'start' then
             gameState = 'serve'
         elseif gameState == 'victory' then
             player1.score = 0
             player2.score = 0
-            gameState = 'start'
+            gameState = 'playerSelect'
         elseif gameState == 'serve' then 
             gameState = 'play'
         end
@@ -218,12 +257,13 @@ function love.draw()
 
     --Render Ball
     renderRectangle(ball)
-    renderRectangle(ball2)
     --Render paddles
-    renderRectangle(player1)
-    renderRectangle(player2)
-
-    displayScore()
+    if gameState ~= 'playerSelect' then
+        renderRectangle(player1)
+        renderRectangle(player2)
+        displayScore()
+    end
+    
     if fpsState then
         displayFPS()
     end
@@ -260,7 +300,11 @@ function displayScore()
 end
 
 function displayHeader()
-    if gameState == 'start' then
+    if gameState == 'playerSelect' then
+        love.graphics.setFont(smallFont)
+        love.graphics.printf('Welcome to Tong', 0, 20, VIRTUAL_WIDTH, 'center')
+        love.graphics.printf('Press 1 or 2 to Select the Number of Players!', 0, 32, VIRTUAL_WIDTH, 'center')
+    elseif gameState == 'start' then
         love.graphics.setFont(smallFont)
         love.graphics.printf('Welcome to Tong', 0, 20, VIRTUAL_WIDTH, 'center')
         love.graphics.printf('Press Enter to Play!', 0, 32, VIRTUAL_WIDTH, 'center')
