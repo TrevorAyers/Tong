@@ -5,7 +5,8 @@ function Ball:init(x, y, width, height)
     self.y = y
     self.width = width
     self.height = height
-    self.color = 'white'
+    self.mainColor = 'white'
+    self.secColor = self.mainColor
 
     self.dx = math.random(2) == 1 and 100 or -100
     self.dy = math.random(-50, 50)
@@ -35,7 +36,8 @@ function Ball:reset()
 
     self.dx = math.random(2) == 1 and 100 or -100
     self.dy = math.random(-50, 50) * 1.5
-    self.color = 'white'
+    self.mainColor = 'white'
+    self.secColor = 'white'
 end
 
 function Ball:update(dt)
@@ -51,6 +53,7 @@ function Ball:wrap(ball)
         self.y = VIRTUAL_HEIGHT - self.height
         self.dx = ball.dx
         self.dy = ball.dy
+        self.mainColor = ball.mainColor
         return self
     elseif ball.y <= VIRTUAL_HEIGHT and ball.y + ball.height >= VIRTUAL_HEIGHT then
         self.width = ball.width
@@ -59,6 +62,7 @@ function Ball:wrap(ball)
         self.x = ball.x
         self.dx = ball.dx
         self.dy = ball.dy
+        self.mainColor = ball.mainColor
         return self
     else
         return ball

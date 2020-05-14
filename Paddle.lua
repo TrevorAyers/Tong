@@ -1,14 +1,17 @@
 Paddle = class{}
 
-function Paddle:init(x, y, width, height, color)
+function Paddle:init(x, y, width, height)
     self.x = x
     self.y = y
     self.width = width
     self.height = height
     self.score = 0
-    self.color = color
-
+    
+    self.mainColor = 'white'
+    self.secColor = mainColor
     self.dy = 0
+
+    self.originalHeight = self.height
 end
 
 function Paddle:update(dt)

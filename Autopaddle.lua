@@ -1,13 +1,16 @@
 Ai = class{}
 
-function Ai:init(x, y, width, height, delay, color)
+function Ai:init(x, y, width, height, delay)
     self.x = x
     self.y = y
     self.width = width
     self.height = height
     self.score = 0
     self.maxDelay = delay
-    self.color = color
+    self.originalHeight = self.height
+
+    self.mainColor = 'white'
+    self.secColor = self.mainColor
 
     self.dy = 0
     self.state = 'waiting'

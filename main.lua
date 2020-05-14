@@ -8,6 +8,7 @@ VIRTUAL_HEIGHT = 243
 
 --Set speed (in Pixels / Second)
 PADDLE_SPEED = 200
+PADDLE_HEIGHT = 20
 
 push = require 'push'
 class = require 'class'
@@ -15,6 +16,7 @@ class = require 'class'
 require 'Paddle'
 require 'Ball'
 require 'Autopaddle'
+require 'Upgrade'
 
 --[[
     Runs when game starts up, only once; used to initialize game
@@ -38,10 +40,10 @@ function love.load()
     sounds = {
         ['paddle_hit'] = love.audio.newSource('paddle_hit.wav','static'),
         ['point_scored'] = love.audio.newSource('point_scored.wav','static'),
-        ['edge_hit'] = love.audio.newSource('edge_hit.wav','static')
+        ['edge_hit'] = love.audio.newSource('edge_hit.wav','static'),
+        ['powerup'] = love.audio.newSource('powerup.wav','static')
     }
 
-    PADDLE_HEIGHT = 20
     SCORE_LIMIT = 10
 
     servingPlayer = math.random(2) == 1 and 1 or 2
@@ -49,6 +51,7 @@ function love.load()
     numPlayers = 0
 
     ball = Ball(VIRTUAL_WIDTH / 2 - 2, VIRTUAL_HEIGHT / 2 - 2, 4, 4)
+    upgrade = Upgrade(4)
 
     if servingPlayer == 1 then
         ball.dx = -100
@@ -109,10 +112,53 @@ function love.update(dt)
         if gameState == 'play' then
             
             ball:update(dt)
+            upgrade:update(dt)
             
             p1Collide = ball:collide(player1)
             p2Collide = ball:collide(player2)
+            
+            if upgrade.state ~= 'inactive' then
+                upCollide = ball:collide(upgrade)
+            else
+                upCollide = 0
+            end
 
+            if upCollide ~= 0 then
+                if ball.dx < 0 then
+                    if player2.mainColor == 'white' then
+                        player2.mainColor = upgrade.mainColor
+                        player2.secColor = player2.mainColor
+                    elseif player2.secColor == player2.mainColor then 
+                        player2.secColor = upgrade.mainColor
+                    else
+                        player2.mainColor = upgrade.mainColor
+                    end
+                else
+                    if player1.mainColor == 'white' then
+                        player1.mainColor = upgrade.mainColor
+                        player1.secColor = player1.mainColor
+                    elseif player1.secColor == player1.mainColor then 
+                        player1.secColor = upgrade.mainColor
+                    else
+                        player1.mainColor = upgrade.mainColor
+                    end
+                end
+               
+                if player1.mainColor == 'blue' or player1.secColor == 'blue' then
+                    player1.height = player1.originalHeight * 2
+                else 
+                    player1.height = player1.originalHeight 
+                end
+
+                if player2.mainColor == 'blue' or player2.secColor == 'blue' then
+                    player2.height = player2.originalHeight * 2
+                else 
+                    player2.height = player2.originalHeight 
+                end
+                sounds['paddle_hit']:play()
+                upgrade:reset()
+            end
+            
             if p1Collide ~= 0 then
                 --deflect ball to right
                 if p1Collide == 2 then
@@ -120,7 +166,8 @@ function love.update(dt)
                 elseif p1Collide == 3 then
                     ball.dy =  - tipbonus * math.abs(ball.dy)
                 end
-                ball.color = player1.color
+                ball.mainColor = player1.maincolor
+                ball.secColor = player1.secColor
                 ball.dx = -ball.dx * 1.1
                 ball.x = player1.x + player1.width
                 sounds['paddle_hit']:play()
@@ -137,7 +184,8 @@ function love.update(dt)
                 elseif p2Collide == 3 then
                     ball.dy =  - tipbonus * math.abs(ball.dy)
                 end
-                ball.color = player2.color
+                ball.mainColor = player2.mainColor
+                ball.secColor = player2.secColor
                 ball.dx = -ball.dx * 1.1
                 ball.x = player2.x - ball.width
                 sounds['paddle_hit']:play()
@@ -147,7 +195,7 @@ function love.update(dt)
                 end
             end
 
-            if ball.color == 'green' then
+            if ball.mainColor == 'green' or ball.secColor == 'green' then
                 ball = ball:wrap(ball)
             else
                 if ball.y <= 0 then
@@ -220,13 +268,13 @@ function love.keypressed(key)
         love.event.quit()
     elseif gameState == 'playerSelect' then
         if key == '1' then
-            player1 = Paddle(5, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 'white')
-            player2 = Ai(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 0.25, 'white')
+            player1 = Paddle(5, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT)
+            player2 = Ai(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 0.25)
             numPlayers = 1
             gameState = 'start'
         elseif key == '2' then
-            player1 = Paddle(5, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 'white')
-            player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT, 'white')
+            player1 = Paddle(5, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT)
+            player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT / 2 - PADDLE_HEIGHT / 2, 5, PADDLE_HEIGHT)
             numPlayers = 2
             gameState = 'start'
         end
@@ -256,12 +304,16 @@ function love.draw()
     displayHeader()
 
     --Render Ball
-    renderRectangle(ball)
     --Render paddles
     if gameState ~= 'playerSelect' then
+        renderRectangle(ball)
         renderRectangle(player1)
         renderRectangle(player2)
         displayScore()
+
+        if upgrade.state == 'display' then
+            renderRectangle(upgrade)
+        end
     end
     
     if fpsState then
@@ -279,17 +331,30 @@ function displayFPS()
 end
 
 function renderRectangle(square)
-    if square.color == 'red' then
+    if square.mainColor == 'red' then
         love.graphics.setColor(1, 0, 0, 1)
-    elseif square.color == 'green' then
+    elseif square.mainColor == 'green' then
         love.graphics.setColor(0, 1, 0, 1)
-    elseif square.color == 'blue' then
+    elseif square.mainColor == 'blue' then
         love.graphics.setColor(0, 0, 1, 1)
     else
         love.graphics.setColor(1, 1, 1, 1)
     end
     love.graphics.rectangle('fill', square.x, square.y, square.width, square.height)
-    love.graphics.setColor(1, 1, 1, 1)
+    
+    if square.secColor ~= square.mainColor then
+        if square.secColor == 'red' then
+            love.graphics.setColor(1, 0, 0, 1)
+        elseif square.secColor == 'green' then
+            love.graphics.setColor(0, 1, 0, 1)
+        elseif square.secColor == 'blue' then
+            love.graphics.setColor(0, 0, 1, 1)
+        else
+            love.graphics.setColor(1, 1, 1, 1)
+        end
+        love.graphics.rectangle('line', square.x, square.y, square.width, square.height)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
 end
 
 
